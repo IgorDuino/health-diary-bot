@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     # local apps
     "users.apps.UsersConfig",
     "text_manager.apps.TextManagerConfig",
+    "diary.apps.DiaryConfig",
 ]
 
 MIDDLEWARE = [

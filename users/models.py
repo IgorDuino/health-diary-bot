@@ -26,6 +26,9 @@ class User(CreateUpdateTracker):
     deep_link = models.CharField(max_length=64, null=True, blank=True)
     is_blocked_bot = models.BooleanField(default=False)
 
+    garmin_login = models.CharField(max_length=64, null=True, blank=True)
+    garmin_password = models.CharField(max_length=64, null=True, blank=True)
+
     is_admin = models.BooleanField(default=False)
     is_first_time = models.BooleanField(default=True)
 
@@ -45,6 +48,10 @@ class User(CreateUpdateTracker):
             return cls.objects.get(user_id=data["user_id"])
         except cls.DoesNotExist:
             return False
+
+    @property
+    def has_garmin_credentials(self) -> bool:
+        return self.garmin_login and self.garmin_password
 
     @property
     def tg_str(self) -> str:

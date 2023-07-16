@@ -29,7 +29,7 @@ def run_polling(tg_token: str = TELEGRAM_TOKEN):
     bot = updater.bot
     bot.send_message(
         chat_id=TELEGRAM_LOGS_CHAT_ID,
-        text=f"Bot started",
+        text=f"Bot started /start",
     )
 
     jq = updater.job_queue
