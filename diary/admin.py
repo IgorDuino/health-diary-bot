@@ -1,3 +1,14 @@
 from django.contrib import admin
 
-# Register your models here.
+
+from diary.models import Dish, Meal
+
+
+@admin.register(Dish)
+class DishAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(Meal)
+class MealAdmin(admin.ModelAdmin):
+    pass
