@@ -12,7 +12,6 @@ services:
       - "5433:5432"
   redis:
     image: redis:alpine
-    container_name: cupvpn_redis
 
   web:
     build:
