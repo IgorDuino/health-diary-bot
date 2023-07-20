@@ -6,9 +6,9 @@ from diary.models import Dish, Meal
 
 @admin.register(Dish)
 class DishAdmin(admin.ModelAdmin):
-    pass
+    list_display = ("title", "calories", "protein", "fats", "carbohydrates")
 
 
 @admin.register(Meal)
 class MealAdmin(admin.ModelAdmin):
-    pass
+    list_display = ("dish", "grams", "user")

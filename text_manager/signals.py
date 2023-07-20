@@ -4,7 +4,14 @@ from django.dispatch import receiver
 
 @receiver(post_migrate)
 def do_something_after_migrations(sender, **kwargs):
-    from text_manager.models import text_choices, Text, Texts, button_text_choices, ButtonText, ButtonTexts
+    from text_manager.models import (
+        text_choices,
+        Text,
+        Texts,
+        button_text_choices,
+        ButtonText,
+        ButtonTexts,
+    )
 
     for choice in text_choices:
         if not Text.objects.filter(title=choice).exists():

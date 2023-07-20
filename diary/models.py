@@ -4,6 +4,7 @@ from django.core.validators import MinValueValidator
 
 
 class Dish(models.Model):
+    id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=255)
     grams = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     calories = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
@@ -32,9 +33,10 @@ class Dish(models.Model):
 
 
 class Meal(CreateTracker):
+    id = models.AutoField(primary_key=True)
     dish = models.ForeignKey("diary.Dish", on_delete=models.CASCADE)
     grams = models.PositiveIntegerField()
     user = models.ForeignKey("users.User", on_delete=models.CASCADE)
 
     def __str__(self):
-        return self.title
+        return f"{self.dish.title} - {self.grams}г"
