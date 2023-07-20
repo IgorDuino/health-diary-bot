@@ -1,7 +1,7 @@
 import pandas as pd
 from diary.models import Dish
 
-df = pd.read_excel("КроссТаблица.xlsx")
+df = pd.read_excel("dishes.xlsx")
 
 for index, row in df.iterrows():
     dish = Dish(
