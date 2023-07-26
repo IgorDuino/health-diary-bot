@@ -4,6 +4,7 @@ from telegram import Bot, ParseMode
 from telegram.ext import Updater, PicklePersistence
 import datetime
 
+
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "dtb.settings")
 django.setup()
 

@@ -143,3 +143,16 @@ def choose_meal_date() -> InlineKeyboardMarkup:
     ]
 
     return InlineKeyboardMarkup(buttons)
+
+
+def call_menu() -> InlineKeyboardMarkup:
+    buttons = [
+        [
+            InlineKeyboardButton(
+                button_texts.home,
+                callback_data=t(f"cancel"),
+            ),
+        ],
+    ]
+
+    return InlineKeyboardMarkup(buttons)

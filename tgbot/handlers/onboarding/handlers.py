@@ -13,6 +13,7 @@ from text_manager.models import texts, button_texts
 from users.models import User
 
 from diary.models import Dish, Meal
+from fuzzywuzzy import process
 
 from tgbot.utils.garmin import check_garmin_credentials
 
@@ -94,6 +95,8 @@ def start(update: Update, context: CallbackContext) -> None:
             reply_markup=keyboards.user_menu(user),
             parse_mode=ParseMode.HTML,
         )
+
+    context.user_data["dishes_to_handle"] = []
 
     return ConversationHandler.END
 
@@ -270,17 +273,37 @@ def garmin_password_handler(update: Update, context: CallbackContext):
 
 def start_choose_meal(update: Update, context: CallbackContext):
     user = User.get_user(update)
-    from fuzzywuzzy import process
+
+    if not (update.message and update.message.text) and len(context.user_data.get("dishes_to_handle", [])) == 0:
+        update.callback_query.edit_message_text(
+            text=texts.user_error_message,
+            reply_markup=keyboards.call_menu(),
+            parse_mode=ParseMode.HTML,
+        )
+        return ConversationHandler.END
+
+    if update.message and update.message.text:
+        data = update.message.text.strip().splitlines()
+        data = list(filter(lambda x: x, data))
+
+    else:
+        data = context.user_data["dishes_to_handle"]
+
+    text = data[0]
+    context.user_data["dishes_to_handle"] = data[1:]
+
+    if text.split()[-1].isdigit():
+        weight = int(text.split()[-1])
+        text = " ".join(text.split()[:-1])
+        context.user_data["weight"] = weight
 
     dishes = Dish.objects.all()
-
-    text = update.message.text
 
     top = process.extract(text, dishes, limit=8)
 
     context.bot.send_message(
         chat_id=update.effective_user.id,
-        text=texts.choose_meal,
+        text=texts.choose_meal.format(name=text),
         reply_markup=keyboards.choose_meal(top),
         parse_mode=ParseMode.HTML,
     )
@@ -303,6 +326,13 @@ def choose_meal(update: Update, context: CallbackContext):
         parse_mode=ParseMode.HTML,
     )
 
+    if context.user_data.get("weight"):
+        try:
+            weight = int(context.user_data["weight"])
+            return choose_meal_date(update, context)
+        except ValueError:
+            pass
+
     return states.CHOOSE_MEAL_WEIGHT
 
 
@@ -319,29 +349,31 @@ def choose_meal_weight(update: Update, context: CallbackContext):
         )
         return ConversationHandler.END
 
-    weight = update.message.text
+    if not context.user_data.get("weight"):
+        weight = update.message.text
 
-    try:
-        weight = int(weight)
-    except ValueError:
+        try:
+            weight = int(weight)
+        except ValueError:
+            context.bot.send_message(
+                chat_id=update.effective_user.id,
+                text=texts.choose_meal_weight.format(title=dish.title),
+                reply_markup=keyboards.cancel_button(),
+                parse_mode=ParseMode.HTML,
+            )
+            return states.CHOOSE_MEAL_WEIGHT
+
+        context.user_data["weight"] = weight
+
+    else:
         context.bot.send_message(
             chat_id=update.effective_user.id,
-            text=texts.choose_meal_weight.format(title=dish.title),
-            reply_markup=keyboards.cancel_button(),
+            text=texts.choose_meal_date.format(title=dish.title, weight=weight),
+            reply_markup=keyboards.choose_meal_date(),
             parse_mode=ParseMode.HTML,
         )
-        return states.CHOOSE_MEAL_WEIGHT
 
-    context.user_data["weight"] = weight
-
-    context.bot.send_message(
-        chat_id=update.effective_user.id,
-        text=texts.choose_meal_date.format(title=dish.title, weight=weight),
-        reply_markup=keyboards.choose_meal_date(),
-        parse_mode=ParseMode.HTML,
-    )
-
-    return states.CHOOSE_MEAL_DATE
+        return states.CHOOSE_MEAL_DATE
 
 
 def choose_meal_date(update: Update, context: CallbackContext):
@@ -405,4 +437,9 @@ def choose_meal_date(update: Update, context: CallbackContext):
             parse_mode=ParseMode.HTML,
         )
 
-    return start(update, context)
+    dishes_to_handle = context.user_data.get("dishes_to_handle", [])
+
+    if len(dishes_to_handle) == 0:
+        return start(update, context)
+
+    return start_choose_meal(update, context)
