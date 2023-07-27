@@ -49,7 +49,8 @@ def additional_menu(user: User) -> InlineKeyboardMarkup:
         buttons = [
             [
                 KeyboardButton(button_texts.sync_garmin),
-            ][
+            ],
+            [
                 KeyboardButton(button_texts.delete_garmin_credentials),
             ],
             [

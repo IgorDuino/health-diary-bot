@@ -349,7 +349,7 @@ def choose_meal_weight(update: Update, context: CallbackContext):
         )
         return ConversationHandler.END
 
-    if not context.user_data.get("weight"):
+    if not context.user_data.get("weight", None):
         weight = update.message.text
 
         try:
@@ -365,15 +365,14 @@ def choose_meal_weight(update: Update, context: CallbackContext):
 
         context.user_data["weight"] = weight
 
-    else:
-        context.bot.send_message(
-            chat_id=update.effective_user.id,
-            text=texts.choose_meal_date.format(title=dish.title, weight=weight),
-            reply_markup=keyboards.choose_meal_date(),
-            parse_mode=ParseMode.HTML,
-        )
+    context.bot.send_message(
+        chat_id=update.effective_user.id,
+        text=texts.choose_meal_date.format(title=dish.title, weight=weight),
+        reply_markup=keyboards.choose_meal_date(),
+        parse_mode=ParseMode.HTML,
+    )
 
-        return states.CHOOSE_MEAL_DATE
+    return states.CHOOSE_MEAL_DATE
 
 
 def choose_meal_date(update: Update, context: CallbackContext):
@@ -419,6 +418,7 @@ def choose_meal_date(update: Update, context: CallbackContext):
                 reply_markup=keyboards.choose_meal_date(),
                 parse_mode=ParseMode.HTML,
             )
+
         return states.CHOOSE_MEAL_DATE
 
     meal = Meal(user=user, dish=dish, grams=weight, created_at=date)
@@ -438,6 +438,7 @@ def choose_meal_date(update: Update, context: CallbackContext):
         )
 
     dishes_to_handle = context.user_data.get("dishes_to_handle", [])
+    context.user_data["weight"] = None
 
     if len(dishes_to_handle) == 0:
         return start(update, context)
