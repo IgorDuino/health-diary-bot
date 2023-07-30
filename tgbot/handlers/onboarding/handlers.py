@@ -43,7 +43,11 @@ def start(update: Update, context: CallbackContext):
         created = True
 
     if created:
-        start_code = update.message.text.split(" ")[1] if len(update.message.text.split(" ")) > 1 else None
+        start_code = (
+            update.message.text.split(" ")[1]
+            if len(update.message.text.split(" ")) > 1
+            else None
+        )
         if start_code:
             referrer = User.objects.filter(user_id=start_code).first()
             if referrer:
@@ -271,10 +275,22 @@ def garmin_password_handler(update: Update, context: CallbackContext):
     return ConversationHandler.END
 
 
+import re
+
+def convert_to_integer(input_str):
+    numbers = re.findall(r'\d+', input_str)
+    if len(numbers) == 1:
+        return int(numbers[0])
+    else:
+        return None
+    
 def start_choose_meal(update: Update, context: CallbackContext):
     user = User.get_user(update)
 
-    if not (update.message and update.message.text) and len(context.user_data.get("dishes_to_handle", [])) == 0:
+    if (
+        not (update.message and update.message.text)
+        and len(context.user_data.get("dishes_to_handle", [])) == 0
+    ):
         update.callback_query.edit_message_text(
             text=texts.user_error_message,
             reply_markup=keyboards.call_menu(),
@@ -283,8 +299,34 @@ def start_choose_meal(update: Update, context: CallbackContext):
         return ConversationHandler.END
 
     if update.message and update.message.text:
-        data = update.message.text.strip().splitlines()
+        data = update.message.text
+        data = data.replace(";", "\n")
+        data = data.replace(",", "\n")
+
+        gram_words = [
+            "граммов",
+            "граммы",
+            "грамма",
+            "грамов",
+            "грамм",
+            "грама",
+            "грам",
+            "гр.",
+        ]
+
+        for word in gram_words:
+            data = data.replace(word, "")
+
+        data = data.replace("-", " ")
+        data = data.replace(":", " ")
+
+        data = data.strip().splitlines()
+
+        data = list(map(lambda x: " ".join(x.split()), data))
+
         data = list(filter(lambda x: x, data))
+        data = list(map(lambda x: x.strip(), data))
+        print(data)
 
     else:
         data = context.user_data["dishes_to_handle"]
@@ -292,8 +334,8 @@ def start_choose_meal(update: Update, context: CallbackContext):
     text = data[0]
     context.user_data["dishes_to_handle"] = data[1:]
 
-    if text.split()[-1].isdigit():
-        weight = int(text.split()[-1])
+    if not(convert_to_integer(text.split()[-1]) is  None):
+        weight = convert_to_integer(text.split()[-1])
         text = " ".join(text.split()[:-1])
         context.user_data["weight"] = weight
 
@@ -353,10 +395,10 @@ def choose_meal_weight(update: Update, context: CallbackContext):
         weight = update.message.text
     else:
         weight = context.user_data["weight"]
+    
+    weight = convert_to_integer(weight)
 
-    try:
-        weight = int(weight)
-    except ValueError:
+    if weight is None:
         context.bot.send_message(
             chat_id=update.effective_user.id,
             text=texts.choose_meal_weight.format(title=dish.title),
