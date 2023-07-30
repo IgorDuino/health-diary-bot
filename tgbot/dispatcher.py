@@ -10,7 +10,7 @@ from telegram.ext import (
 
 from dtb.settings import DEBUG
 
-from tgbot.utils import files, error
+from tgbot.utils import error
 from tgbot.handlers.admin import handlers as admin_handlers
 from tgbot.handlers.onboarding import handlers as onboarding_handlers
 from tgbot.main import bot
@@ -18,10 +18,9 @@ from tgbot.main import bot
 from tgbot import states
 
 from text_manager.models import button_texts
-from telegram.ext import BaseFilter
 
 
-def s(pattern):
+def s(pattern) -> callable:
     def check(string):
         return string.startswith(pattern)
 

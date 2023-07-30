@@ -21,7 +21,7 @@ from tgbot.utils.garmin import check_garmin_credentials
 logger = logging.getLogger(__name__)
 
 
-def start(update: Update, context: CallbackContext) -> None:
+def start(update: Update, context: CallbackContext):
     user = User.get_user(update)
     if user:
         created = False
@@ -101,7 +101,7 @@ def start(update: Update, context: CallbackContext) -> None:
     return ConversationHandler.END
 
 
-def specify_date(update: Update, context: CallbackContext) -> None:
+def specify_date(update: Update, context: CallbackContext):
     update.callback_query.edit_message_text(
         text=texts.specify_date,
         reply_markup=keyboards.cancel_button(),
@@ -111,7 +111,7 @@ def specify_date(update: Update, context: CallbackContext) -> None:
     return states.STAT_SPECIFY_DATE
 
 
-def statistics(update: Update, context: CallbackContext) -> None:
+def statistics(update: Update, context: CallbackContext):
     user = User.get_user(update)
 
     date = context.user_data.get("date")
@@ -351,19 +351,21 @@ def choose_meal_weight(update: Update, context: CallbackContext):
 
     if not context.user_data.get("weight", None):
         weight = update.message.text
+    else:
+        weight = context.user_data["weight"]
 
-        try:
-            weight = int(weight)
-        except ValueError:
-            context.bot.send_message(
-                chat_id=update.effective_user.id,
-                text=texts.choose_meal_weight.format(title=dish.title),
-                reply_markup=keyboards.cancel_button(),
-                parse_mode=ParseMode.HTML,
-            )
-            return states.CHOOSE_MEAL_WEIGHT
+    try:
+        weight = int(weight)
+    except ValueError:
+        context.bot.send_message(
+            chat_id=update.effective_user.id,
+            text=texts.choose_meal_weight.format(title=dish.title),
+            reply_markup=keyboards.cancel_button(),
+            parse_mode=ParseMode.HTML,
+        )
+        return states.CHOOSE_MEAL_WEIGHT
 
-        context.user_data["weight"] = weight
+    context.user_data["weight"] = weight
 
     context.bot.send_message(
         chat_id=update.effective_user.id,
