@@ -43,11 +43,7 @@ def start(update: Update, context: CallbackContext):
         created = True
 
     if created:
-        start_code = (
-            update.message.text.split(" ")[1]
-            if len(update.message.text.split(" ")) > 1
-            else None
-        )
+        start_code = update.message.text.split(" ")[1] if len(update.message.text.split(" ")) > 1 else None
         if start_code:
             referrer = User.objects.filter(user_id=start_code).first()
             if referrer:
@@ -250,7 +246,13 @@ def garmin_password_handler(update: Update, context: CallbackContext):
 
     garmin_password = update.message.text
 
+    wait_msg = update.message.reply_text(
+        text=texts.garmin_wait,
+        parse_mode=ParseMode.HTML,
+    )
+
     if not check_garmin_credentials(garmin_username, garmin_password):
+        wait_msg.delete()
         context.bot.send_message(
             chat_id=update.effective_user.id,
             text=texts.garmin_invalid_credentials,
@@ -265,6 +267,7 @@ def garmin_password_handler(update: Update, context: CallbackContext):
     user.garmin_password = garmin_password
     user.save()
 
+    wait_msg.delete()
     context.bot.send_message(
         chat_id=update.effective_user.id,
         text=texts.garmin_successfully_added,
@@ -277,20 +280,19 @@ def garmin_password_handler(update: Update, context: CallbackContext):
 
 import re
 
+
 def convert_to_integer(input_str):
-    numbers = re.findall(r'\d+', input_str)
+    numbers = re.findall(r"\d+", input_str)
     if len(numbers) == 1:
         return int(numbers[0])
     else:
         return None
-    
+
+
 def start_choose_meal(update: Update, context: CallbackContext):
     user = User.get_user(update)
 
-    if (
-        not (update.message and update.message.text)
-        and len(context.user_data.get("dishes_to_handle", [])) == 0
-    ):
+    if not (update.message and update.message.text) and len(context.user_data.get("dishes_to_handle", [])) == 0:
         update.callback_query.edit_message_text(
             text=texts.user_error_message,
             reply_markup=keyboards.call_menu(),
@@ -334,7 +336,7 @@ def start_choose_meal(update: Update, context: CallbackContext):
     text = data[0]
     context.user_data["dishes_to_handle"] = data[1:]
 
-    if not(convert_to_integer(text.split()[-1]) is  None):
+    if not (convert_to_integer(text.split()[-1]) is None):
         weight = convert_to_integer(text.split()[-1])
         text = " ".join(text.split()[:-1])
         context.user_data["weight"] = weight
@@ -395,7 +397,7 @@ def choose_meal_weight(update: Update, context: CallbackContext):
         weight = update.message.text
     else:
         weight = context.user_data["weight"]
-    
+
     weight = convert_to_integer(weight)
 
     if weight is None:
