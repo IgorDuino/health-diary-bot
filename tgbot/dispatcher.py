@@ -90,7 +90,7 @@ def setup_dispatcher(dp: Dispatcher):
             states.STAT_SPECIFY_DATE: [
                 MessageHandler(
                     Filters.text,
-                    onboarding_handlers.statistics,
+                    onboarding_handlers.statistics_specify_date,
                     pass_user_data=True,
                 ),
             ],
@@ -111,6 +111,29 @@ def setup_dispatcher(dp: Dispatcher):
             pass_user_data=True,
         )
     )
+
+    delete_meal_conversation = ConversationHandler(
+        entry_points=[
+            CallbackQueryHandler(onboarding_handlers.delete_meal_start, pattern=s("delete_meal"), pass_user_data=True)
+        ],
+        states={
+            states.DELETE_MEAL: [
+                MessageHandler(
+                    Filters.regex(r"^\d+$"),
+                    onboarding_handlers.delete_meal,
+                    pass_user_data=True,
+                ),
+            ],
+        },
+        fallbacks=[
+            *fb,
+        ],
+        name="delete_meal",
+        persistent=True,
+        per_user=True,
+    )
+    dp.add_handler(delete_meal_conversation)
+
     add_meal_conversation = ConversationHandler(
         entry_points=[
             MessageHandler(~Filters.regex("^/start$"), onboarding_handlers.start_choose_meal, pass_user_data=True)

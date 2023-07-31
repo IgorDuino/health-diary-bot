@@ -82,6 +82,9 @@ def statistics_menu() -> InlineKeyboardMarkup:
         [
             InlineKeyboardButton(button_texts.current_day, callback_data=t("current_day")),
         ],
+        [
+            InlineKeyboardButton(button_texts.delete_meal, callback_data=t("delete_meal")),
+        ],
     ]
 
     return InlineKeyboardMarkup(buttons)

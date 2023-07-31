@@ -111,6 +111,24 @@ def specify_date(update: Update, context: CallbackContext):
     return states.STAT_SPECIFY_DATE
 
 
+def statistics_specify_date(update: Update, context: CallbackContext):
+    date = update.message.text
+    try:
+        date = datetime.strptime(date, "%d.%m.%y").date()
+    except ValueError:
+        context.bot.send_message(
+            chat_id=update.effective_user.id,
+            text=texts.specify_date,
+            reply_markup=keyboards.cancel_button(),
+            parse_mode=ParseMode.HTML,
+        )
+        return states.STAT_SPECIFY_DATE
+
+    context.user_data["date"] = date
+
+    return statistics(update, context)
+
+
 def statistics(update: Update, context: CallbackContext):
     user = User.get_user(update)
 
@@ -127,22 +145,9 @@ def statistics(update: Update, context: CallbackContext):
         elif update.callback_query.data.startswith("current_day"):
             date = datetime.now().date()
 
-    elif update.message.text != button_texts.statistics:
-        date = update.message.text
-        try:
-            date = datetime.strptime(date, "%d.%m.%y").date()
-        except ValueError:
-            context.bot.send_message(
-                chat_id=update.effective_user.id,
-                text=texts.specify_date,
-                reply_markup=keyboards.cancel_button(),
-                parse_mode=ParseMode.HTML,
-            )
-            return states.STAT_SPECIFY_DATE
-
     context.user_data["date"] = date
 
-    meals = Meal.objects.filter(user=user, created_at__date=date)
+    meals = Meal.objects.filter(user=user, created_at__date=date).order_by("created_at")
 
     total_calories = 0
     total_protein = 0
@@ -151,13 +156,14 @@ def statistics(update: Update, context: CallbackContext):
 
     products_text = ""
 
-    for meal in meals:
+    for i, meal in enumerate(meals):
         dish: Dish = meal.dish
         total_calories += dish.cal * meal.grams
         total_protein += dish.prot * meal.grams
         total_fats += dish.fat * meal.grams
         total_carbohydrates += dish.carb * meal.grams
         products_text += texts.product_stat.format(
+            id=i + 1,
             name=dish.title,
             grams=int(meal.grams),
             calories=int(dish.cal * meal.grams),
@@ -328,7 +334,6 @@ def start_choose_meal(update: Update, context: CallbackContext):
 
         data = list(filter(lambda x: x, data))
         data = list(map(lambda x: x.strip(), data))
-        print(data)
 
     else:
         data = context.user_data["dishes_to_handle"]
@@ -490,3 +495,46 @@ def choose_meal_date(update: Update, context: CallbackContext):
         return start(update, context)
 
     return start_choose_meal(update, context)
+
+
+def delete_meal_start(update: Update, context: CallbackContext):
+    context.bot.send_message(
+        chat_id=update.effective_user.id,
+        text=texts.delete_meal_start,
+        reply_markup=keyboards.cancel_button(),
+        parse_mode=ParseMode.HTML,
+    )
+
+    return states.DELETE_MEAL
+
+
+def delete_meal(update: Update, context: CallbackContext):
+    user = User.get_user(update)
+
+    meal_id = int(update.message.text)
+
+    try:
+        date = context.user_data["date"]
+
+        meals = Meal.objects.filter(user=user, created_at__date=date).order_by("created_at")
+
+        meal = meals[meal_id - 1]
+    except (ValueError, IndexError, KeyError):
+        context.bot.send_message(
+            chat_id=update.effective_user.id,
+            text=texts.delete_meal_error,
+            reply_markup=keyboards.cancel_button(),
+            parse_mode=ParseMode.HTML,
+        )
+        return states.DELETE_MEAL
+
+    meal.delete()
+
+    context.bot.send_message(
+        chat_id=update.effective_user.id,
+        text=texts.meal_deleted,
+        reply_markup=keyboards.home_menu(),
+        parse_mode=ParseMode.HTML,
+    )
+
+    return statistics(update, context)
