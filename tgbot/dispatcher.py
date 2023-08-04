@@ -64,6 +64,7 @@ def setup_dispatcher(dp: Dispatcher):
         per_user=True,
     )
     dp.add_handler(add_garmin_conversation)
+
     dp.add_handler(
         MessageHandler(
             Filters.regex(button_texts.home),
@@ -79,6 +80,7 @@ def setup_dispatcher(dp: Dispatcher):
             pass_user_data=True,
         )
     )
+
     dp.add_handler(CallbackQueryHandler(onboarding_handlers.statistics, pattern=s("previous_day"), pass_user_data=True))
     dp.add_handler(CallbackQueryHandler(onboarding_handlers.statistics, pattern=s("next_day"), pass_user_data=True))
     dp.add_handler(CallbackQueryHandler(onboarding_handlers.statistics, pattern=s("current_day"), pass_user_data=True))

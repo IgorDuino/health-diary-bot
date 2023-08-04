@@ -112,10 +112,23 @@ def specify_date(update: Update, context: CallbackContext):
 
 
 def statistics_specify_date(update: Update, context: CallbackContext):
-    date = update.message.text
-    try:
-        date = datetime.strptime(date, "%d.%m.%y").date()
-    except ValueError:
+    text_date = update.message.text
+
+    date_formats = [
+        "%d.%m",
+        "%d.%m.%y",
+        "%d.%m.%Y",
+    ]
+    parsed_date = None
+    for date_format in date_formats:
+        try:
+            parsed_date = datetime.strptime(text_date, date_format)
+            if date_format == "%d.%m":
+                parsed_date = parsed_date.replace(year=datetime.now().year)
+            break
+        except ValueError:
+            pass
+    else:
         context.bot.send_message(
             chat_id=update.effective_user.id,
             text=texts.specify_date,
@@ -124,7 +137,7 @@ def statistics_specify_date(update: Update, context: CallbackContext):
         )
         return states.STAT_SPECIFY_DATE
 
-    context.user_data["date"] = date
+    context.user_data["date"] = parsed_date.date()
 
     return statistics(update, context)
 
@@ -145,7 +158,7 @@ def statistics(update: Update, context: CallbackContext):
         elif update.callback_query.data.startswith("current_day"):
             date = datetime.now().date()
 
-    context.user_data["date"] = date
+        context.user_data["date"] = date
 
     meals = Meal.objects.filter(user=user, date_time__date=date).order_by("date_time")
 
@@ -179,7 +192,7 @@ def statistics(update: Update, context: CallbackContext):
         )
 
     text = texts.statistics.format(
-        date=date,
+        date=date.strftime("%d.%m.%Y"),
         products=products_text,
         calories=int(total_calories),
         protein=int(total_protein),
