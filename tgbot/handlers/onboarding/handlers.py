@@ -535,10 +535,14 @@ def choose_meal_date(update: Update, context: CallbackContext):
 
 
 def delete_meal_start(update: Update, context: CallbackContext):
-    context.bot.send_message(
-        chat_id=update.effective_user.id,
+    user = User.get_user(update)
+
+    date = context.user_data.get("date", datetime.now().date())
+    meals = Meal.objects.filter(user=user, date_time__date=date)
+
+    update.callback_query.edit_message_text(
         text=texts.delete_meal_start,
-        reply_markup=keyboards.cancel_button(),
+        reply_markup=keyboards.delete_meal_menu(meals),
         parse_mode=ParseMode.HTML,
     )
 
@@ -548,29 +552,14 @@ def delete_meal_start(update: Update, context: CallbackContext):
 def delete_meal(update: Update, context: CallbackContext):
     user = User.get_user(update)
 
-    meal_id = int(update.message.text)
+    meal_id = update.callback_query.data.split(":")[1]
 
-    try:
-        date = context.user_data["date"]
-
-        meals = Meal.objects.filter(user=user, date_time__date=date).order_by("date_time")
-
-        meal = meals[meal_id - 1]
-    except (ValueError, IndexError, KeyError):
-        context.bot.send_message(
-            chat_id=update.effective_user.id,
-            text=texts.delete_meal_error,
-            reply_markup=keyboards.cancel_button(),
-            parse_mode=ParseMode.HTML,
-        )
-        return states.DELETE_MEAL
+    meal = Meal.objects.get(id=meal_id, user=user)
 
     meal.delete()
 
-    context.bot.send_message(
-        chat_id=update.effective_user.id,
+    update.callback_query.edit_message_text(
         text=texts.meal_deleted,
-        reply_markup=keyboards.home_menu(),
         parse_mode=ParseMode.HTML,
     )
 

@@ -120,14 +120,15 @@ def setup_dispatcher(dp: Dispatcher):
         ],
         states={
             states.DELETE_MEAL: [
-                MessageHandler(
-                    Filters.regex(r"^\d+$"),
+                CallbackQueryHandler(
                     onboarding_handlers.delete_meal,
+                    pattern=s("delete_meal:"),
                     pass_user_data=True,
                 ),
             ],
         },
         fallbacks=[
+            CallbackQueryHandler(onboarding_handlers.statistics, pattern=s("cancel"), pass_user_data=True),
             *fb,
         ],
         name="delete_meal",

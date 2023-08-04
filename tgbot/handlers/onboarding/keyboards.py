@@ -1,19 +1,18 @@
+from typing import List
+import time
+
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     KeyboardButton,
     ReplyKeyboardMarkup,
 )
-from diary.models import Dish
-from dtb import settings
+
+from diary.models import Dish, Meal
 
 from users.models import User
 
-from typing import List
-
 from text_manager.models import button_texts
-
-import time
 
 
 def t(text: str) -> str:
@@ -86,6 +85,25 @@ def statistics_menu() -> InlineKeyboardMarkup:
             InlineKeyboardButton(button_texts.delete_meal, callback_data=t("delete_meal")),
         ],
     ]
+
+    return InlineKeyboardMarkup(buttons)
+
+
+def delete_meal_menu(meals: List[Meal]) -> InlineKeyboardMarkup:
+    buttons = []
+
+    for meal in meals:
+        buttons.append(
+            [
+                InlineKeyboardButton(f"[{meal.id}] {meal.dish.title[:50]} {meal.grams}", callback_data=t(f"delete_meal:{meal.id}")),
+            ]
+        )
+
+    buttons.append(
+        [
+            InlineKeyboardButton(button_texts.cancel, callback_data=t("cancel")),
+        ],
+    )
 
     return InlineKeyboardMarkup(buttons)
 
