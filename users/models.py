@@ -64,3 +64,15 @@ class User(CreateUpdateTracker):
         if self.username:
             return self.username
         return self.user_id
+
+    @property
+    def garmin_plain_password(self) -> str:
+        from tgbot.utils.aescrypto import decrypt_data
+
+        return decrypt_data(self.garmin_password)
+
+    @property
+    def garmin_plain_login(self) -> str:
+        from tgbot.utils.aescrypto import decrypt_data
+
+        return decrypt_data(self.garmin_login)

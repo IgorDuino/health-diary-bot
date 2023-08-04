@@ -17,6 +17,7 @@ from diary.models import Dish, Meal, GarminSyncedData
 from fuzzywuzzy import process
 
 from tgbot.utils.garmin import check_garmin_credentials
+from tgbot.utils.aescrypto import encrypt_data
 
 
 logger = logging.getLogger(__name__)
@@ -307,8 +308,8 @@ def garmin_password_handler(update: Update, context: CallbackContext):
 
         return states.GARMIN_USERNAME
 
-    user.garmin_login = garmin_username
-    user.garmin_password = garmin_password
+    user.garmin_login = encrypt_data(garmin_username)
+    user.garmin_password = encrypt_data(garmin_password)
     user.save()
 
     wait_msg.delete()
@@ -640,7 +641,7 @@ def sync_garmin(update: Update, context: CallbackContext):
 
     from garminconnect import Garmin
 
-    client = Garmin(user.garmin_login, user.garmin_password)
+    client = Garmin(user.garmin_plain_login, user.garmin_plain_password)
     client.login()
     today = datetime.now().date()
 

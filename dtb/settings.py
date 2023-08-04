@@ -23,7 +23,7 @@ def generate_secret():
     return "".join(default_secret_key_alphabet_list)[:64]
 
 
-SECRET_KEY = config("DJANGO_SECRET_KEY", default=generate_secret())
+SECRET_KEY = config("DJANGO_SECRET_KEY")
 
 DEBUG = config("DJANGO_DEBUG", default=False, cast=bool)
 
