@@ -96,7 +96,7 @@ def delete_meal_menu(meals: List[Meal]) -> InlineKeyboardMarkup:
         buttons.append(
             [
                 InlineKeyboardButton(
-                    f"[{meal.id}] {meal.dish.title[:50]} {meal.grams}", callback_data=t(f"delete_meal_id:{meal.id}")
+                    f"{meal.dish.title[:50]} {meal.grams}", callback_data=t(f"delete_meal_id:{meal.id}")
                 ),
             ]
         )

@@ -375,13 +375,16 @@ def start_choose_meal(update: Update, context: CallbackContext):
             "грама",
             "грам",
             "гр.",
+            " гр",
+            " г",
+            " г.",
+            "гр.",
         ]
 
         for word in gram_words:
             data = data.replace(word, "")
 
         data = data.replace("-", " ")
-        data = data.replace(":", " ")
 
         data = data.strip().splitlines()
 
@@ -390,13 +393,22 @@ def start_choose_meal(update: Update, context: CallbackContext):
         data = list(filter(lambda x: x, data))
         data = list(map(lambda x: x.strip(), data))
 
-    text = data[0]
-    context.user_data["dishes_to_handle"] = data[1:]
+    try:
+        text_time = data[0]
+        formated_time = datetime.strptime(text_time, "%H:%M")
+        now = datetime.now().date()
+        context.user_data["group_time"] = datetime.combine(now, formated_time.time())
+        text = data[1]
+        context.user_data["dishes_to_handle"] = data[2:]
+    except ValueError:
+        text = data[0]
+        context.user_data["dishes_to_handle"] = data[1:]
 
-    if not (convert_to_integer(text.split()[-1]) is None):
-        weight = convert_to_integer(text.split()[-1])
-        text = " ".join(text.split()[:-1])
-        context.user_data["weight"] = weight
+    if len(text.split()) > 1:
+        if not (convert_to_integer(text.split()[-1]) is None):
+            weight = convert_to_integer(text.split()[-1])
+            text = " ".join(text.split()[:-1])
+            context.user_data["weight"] = weight
 
     dishes = Dish.objects.all()
 
@@ -422,17 +434,18 @@ def choose_meal(update: Update, context: CallbackContext):
     context.user_data["dish"] = dish
 
     if context.user_data.get("weight"):
-        try:
-            weight = int(context.user_data["weight"])
-            update.callback_query.edit_message_text(
-                text=texts.choose_meal_date.format(title=dish.title, weight=weight),
-                reply_markup=keyboards.choose_meal_date(),
-                parse_mode=ParseMode.HTML,
-            )
-            return states.CHOOSE_MEAL_DATE
+        weight = int(context.user_data["weight"])
 
-        except ValueError:
-            pass
+        if context.user_data.get("group_time"):
+            return choose_meal_date(update, context)
+
+        update.callback_query.edit_message_text(
+            text=texts.choose_meal_date.format(title=dish.title, weight=weight),
+            reply_markup=keyboards.choose_meal_date(),
+            parse_mode=ParseMode.HTML,
+        )
+        return states.CHOOSE_MEAL_DATE
+
 
     update.callback_query.edit_message_text(
         text=texts.choose_meal_weight.format(title=dish.title),
@@ -498,53 +511,56 @@ def choose_meal_date(update: Update, context: CallbackContext):
         )
         return ConversationHandler.END
 
-    if update.callback_query:
-        text_date = update.callback_query.data.split(":")[1]
+    if context.user_data.get("group_time"):
+        parsed_date = context.user_data["group_time"]
     else:
-        text_date = update.message.text
-
-    if text_date == "today":
-        parsed_date = datetime.now()
-    elif text_date == "yesterday":
-        parsed_date = datetime.now() - timedelta(days=1)
-    elif text_date == "tommorow":
-        parsed_date = datetime.now() + timedelta(days=1)
-    else:
-        date_formats = ["%H:%M", "%d.%m.%y", "%d.%m.%Y %H:%M"]
-        parsed_date = None
-
-        for date_format in date_formats:
-            try:
-                parsed_date = datetime.strptime(text_date, date_format)
-                if date_format == "%H:%M":
-                    day = datetime.now().date()
-                    parsed_date = datetime(
-                        day.year,
-                        day.month,
-                        day.day,
-                        parsed_date.hour,
-                        parsed_date.minute,
-                    )
-                break
-            except ValueError:
-                pass
-
+        if update.callback_query:
+            text_date = update.callback_query.data.split(":")[1]
         else:
-            if update.callback_query:
-                update.callback_query.edit_message_text(
-                    text=texts.choose_meal_date.format(title=dish.title, weight=weight),
-                    reply_markup=keyboards.choose_meal_date(),
-                    parse_mode=ParseMode.HTML,
-                )
-            else:
-                context.bot.send_message(
-                    chat_id=update.effective_user.id,
-                    text=texts.choose_meal_date.format(title=dish.title, weight=weight),
-                    reply_markup=keyboards.choose_meal_date(),
-                    parse_mode=ParseMode.HTML,
-                )
+            text_date = update.message.text
 
-            return states.CHOOSE_MEAL_DATE
+        if text_date == "today":
+            parsed_date = datetime.now()
+        elif text_date == "yesterday":
+            parsed_date = datetime.now() - timedelta(days=1)
+        elif text_date == "tommorow":
+            parsed_date = datetime.now() + timedelta(days=1)
+        else:
+            date_formats = ["%H:%M", "%d.%m.%y", "%d.%m.%Y %H:%M"]
+            parsed_date = None
+
+            for date_format in date_formats:
+                try:
+                    parsed_date = datetime.strptime(text_date, date_format)
+                    if date_format == "%H:%M":
+                        day = datetime.now().date()
+                        parsed_date = datetime(
+                            day.year,
+                            day.month,
+                            day.day,
+                            parsed_date.hour,
+                            parsed_date.minute,
+                        )
+                    break
+                except ValueError:
+                    pass
+
+            else:
+                if update.callback_query:
+                    update.callback_query.edit_message_text(
+                        text=texts.choose_meal_date.format(title=dish.title, weight=weight),
+                        reply_markup=keyboards.choose_meal_date(),
+                        parse_mode=ParseMode.HTML,
+                    )
+                else:
+                    context.bot.send_message(
+                        chat_id=update.effective_user.id,
+                        text=texts.choose_meal_date.format(title=dish.title, weight=weight),
+                        reply_markup=keyboards.choose_meal_date(),
+                        parse_mode=ParseMode.HTML,
+                    )
+
+                return states.CHOOSE_MEAL_DATE
 
     meal = Meal(user=user, dish=dish, grams=weight, date_time=parsed_date)
     meal.save()
@@ -577,7 +593,7 @@ def delete_meal_start(update: Update, context: CallbackContext):
     user = User.get_user(update)
 
     date = context.user_data.get("date", datetime.now().date())
-    meals = Meal.objects.filter(user=user, date_time__date=date)
+    meals = Meal.objects.filter(user=user, date_time__date=date).order_by("date_time")
 
     update.callback_query.edit_message_text(
         text=texts.delete_meal_start,
