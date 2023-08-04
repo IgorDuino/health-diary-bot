@@ -100,7 +100,7 @@ class Texts(metaclass=MetaClass):
         "🤔 Простите, но вы ещё не добавили свой аккаунт Garmin. Пожалуйста, добавьте свой аккаунт Garmin"
     )
     garmin_sync_wait = "🕛 Пожалуйста, подождите, идёт синхронизация с Garmin"
-    garmin_stat = "<b>Garmin</b> Синхронизация:\nBody Battery:  <code>+{body_battery_charged_value} / -{body_battery_drained_value} ({body_battery_highest_value})</code>\nПульс:  <code>{resting_heart_rate}мин / {max_avg_heart_rate}макс</code>\nСтресс:  <code>{average_stress_level} - средний</code>\nСон:  <code>{hour_sleep} часов {minutes_sleep} минут</code>\nШаги:  <code>{total_steps}</code>\nДыхание:  <code>{lowest_respiration_value}/{avg_waking_respiration_value}/{highest_respiration_value}</code>"
+    garmin_stat = "<b>Garmin</b> Синхронизация:\nBody Battery:  <code>+{body_battery_charged_value} / -{body_battery_drained_value} ({body_battery_highest_value})</code>\nПульс:  <code>{resting_heart_rate}мин / {max_avg_heart_rate}макс</code>\nСтресс:  <code>{average_stress_level} - средний</code>\nСон:  <code>{hour_sleep} часов {minutes_sleep} минут</code>\nВЧП после сна:  <code>{last_night_hrv}</code>\nШаги:  <code>{total_steps}</code>\nДыхание:  <code>{lowest_respiration_value}/{avg_waking_respiration_value}/{highest_respiration_value}</code>"
     garmin_successfully_synced = "✅ Данные успешно синхронизированы"
     garmin_credentials_deleted = "🗑️ Данные Garmin удалены"
 

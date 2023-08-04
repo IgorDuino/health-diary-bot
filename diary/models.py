@@ -46,7 +46,7 @@ class Meal(CreateTracker):
 class GarminSyncedData(models.Model):
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey("users.User", on_delete=models.CASCADE)
-    date = models.DateField()
+    date_time = models.DateTimeField()
 
     body_battery_charged_value = models.PositiveIntegerField(null=True)
     body_battery_drained_value = models.PositiveIntegerField(null=True)
@@ -57,11 +57,12 @@ class GarminSyncedData(models.Model):
 
     average_stress_level = models.PositiveIntegerField(null=True)
 
-    hour_sleep = models.PositiveIntegerField(null=True)
     minutes_sleep = models.PositiveIntegerField(null=True)
 
     total_steps = models.PositiveIntegerField(null=True)
 
     lowest_respiration_value = models.PositiveIntegerField(null=True)
-    avg_waking_respiration_value = models.PositiveIntegerField(null=True)
     highest_respiration_value = models.PositiveIntegerField(null=True)
+    avg_waking_respiration_value = models.PositiveIntegerField(null=True)
+
+    last_night_hrv = models.PositiveIntegerField(null=True)

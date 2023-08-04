@@ -15,4 +15,4 @@ class MealAdmin(admin.ModelAdmin):
 
 @admin.register(GarminSyncedData)
 class GarminSyncedDataAdmin(admin.ModelAdmin):
-    list_display = ("id", "date", "user")
+    list_display = ("id", "date_time", "user")

@@ -178,7 +178,8 @@ def statistics(update: Update, context: CallbackContext):
 
         if prev_time != meal.date_time:
             prev_time = meal.date_time
-            products_text += meal.date_time.strftime("%H:%M") + ":\n"
+            tm = meal.date_time.strftime("%H:%M")
+            products_text += f"<b>{tm}</b>\n"
 
         products_text += texts.product_stat.format(
             name=dish.title,
@@ -190,7 +191,7 @@ def statistics(update: Update, context: CallbackContext):
         )
 
     garmin_stat_text = ""
-    garmin_stat = GarminSyncedData.objects.filter(user=user, date=date).first()
+    garmin_stat = GarminSyncedData.objects.filter(user=user, date_time__date=date).order_by("-date_time").first()
     if garmin_stat:
         garmin_stat_text = "\n\n" + texts.garmin_stat.format(
             body_battery_charged_value=garmin_stat.body_battery_charged_value,
@@ -199,12 +200,13 @@ def statistics(update: Update, context: CallbackContext):
             resting_heart_rate=garmin_stat.resting_heart_rate,
             max_avg_heart_rate=garmin_stat.max_avg_heart_rate,
             average_stress_level=garmin_stat.average_stress_level,
-            hour_sleep=garmin_stat.hour_sleep,
-            minutes_sleep=garmin_stat.minutes_sleep,
+            hour_sleep=garmin_stat.minutes_sleep // 60,
+            minutes_sleep=garmin_stat.minutes_sleep % 60,
             total_steps=garmin_stat.total_steps,
             lowest_respiration_value=garmin_stat.lowest_respiration_value,
             avg_waking_respiration_value=garmin_stat.avg_waking_respiration_value,
             highest_respiration_value=garmin_stat.highest_respiration_value,
+            last_night_hrv=garmin_stat.last_night_hrv,
         )
 
     text = texts.statistics.format(
@@ -446,7 +448,6 @@ def choose_meal(update: Update, context: CallbackContext):
         )
         return states.CHOOSE_MEAL_DATE
 
-
     update.callback_query.edit_message_text(
         text=texts.choose_meal_weight.format(title=dish.title),
         reply_markup=keyboards.cancel_button(),
@@ -642,7 +643,9 @@ def sync_garmin(update: Update, context: CallbackContext):
     client = Garmin(user.garmin_login, user.garmin_password)
     client.login()
     today = datetime.now().date()
+
     stats = client.get_stats(today.isoformat())
+    hrv_stats = client.get_hrv_data(today.isoformat())
 
     args = {
         "body_battery_charged_value": stats["bodyBatteryChargedValue"],
@@ -651,23 +654,19 @@ def sync_garmin(update: Update, context: CallbackContext):
         "resting_heart_rate": stats["restingHeartRate"],
         "max_avg_heart_rate": stats["maxAvgHeartRate"],
         "average_stress_level": stats["averageStressLevel"],
-        "hour_sleep": stats["sleepingSeconds"] / 3600,
-        "minutes_sleep": stats["sleepingSeconds"] / 60,
+        "minutes_sleep": stats["sleepingSeconds"] // 60,
         "total_steps": stats["totalSteps"],
         "lowest_respiration_value": stats["lowestRespirationValue"],
         "avg_waking_respiration_value": stats["avgWakingRespirationValue"],
+        "highest_respiration_value": stats["highestRespirationValue"],
+        "last_night_hrv": hrv_stats["hrvSummary"]["lastNightAvg"],
     }
 
-    if GarminSyncedData.objects.filter(user=user, date=today).exists():
-        garmin_stat = GarminSyncedData.objects.update(
-            **args,
-        )
-    else:
-        garmin_stat = GarminSyncedData.objects.create(
-            user=user,
-            date=today,
-            **args,
-        )
+    garmin_stat = GarminSyncedData.objects.create(
+        user=user,
+        date_time=datetime.now(),
+        **args,
+    )
 
     wait_message.edit_text(
         text=texts.garmin_successfully_synced,
