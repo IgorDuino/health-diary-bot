@@ -11,4 +11,4 @@ class DishAdmin(admin.ModelAdmin):
 
 @admin.register(Meal)
 class MealAdmin(admin.ModelAdmin):
-    list_display = ("dish", "grams", "user")
+    list_display = ("dish", "grams", "user", "date_time")

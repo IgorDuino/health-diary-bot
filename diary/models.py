@@ -37,6 +37,7 @@ class Meal(CreateTracker):
     dish = models.ForeignKey("diary.Dish", on_delete=models.CASCADE)
     grams = models.PositiveIntegerField()
     user = models.ForeignKey("users.User", on_delete=models.CASCADE)
+    date_time = models.DateTimeField()
 
     def __str__(self):
         return f"{self.dish.title} - {self.grams}г"

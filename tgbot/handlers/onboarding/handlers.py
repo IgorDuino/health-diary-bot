@@ -62,7 +62,7 @@ def start(update: Update, context: CallbackContext):
     user.is_active = True
     user.save()
 
-    meals = Meal.objects.filter(user=user, created_at__date=datetime.now().date())
+    meals = Meal.objects.filter(user=user, date_time__date=datetime.now().date())
 
     calories = 0
     protein = 0
@@ -147,7 +147,7 @@ def statistics(update: Update, context: CallbackContext):
 
     context.user_data["date"] = date
 
-    meals = Meal.objects.filter(user=user, created_at__date=date).order_by("created_at")
+    meals = Meal.objects.filter(user=user, date_time__date=date).order_by("date_time")
 
     total_calories = 0
     total_protein = 0
@@ -156,14 +156,20 @@ def statistics(update: Update, context: CallbackContext):
 
     products_text = ""
 
+    prev_time = None
+
     for i, meal in enumerate(meals):
         dish: Dish = meal.dish
         total_calories += dish.cal * meal.grams
         total_protein += dish.prot * meal.grams
         total_fats += dish.fat * meal.grams
         total_carbohydrates += dish.carb * meal.grams
+
+        if prev_time != meal.date_time:
+            prev_time = meal.date_time
+            products_text += meal.date_time.strftime("%H:%M") + ":\n"
+
         products_text += texts.product_stat.format(
-            id=i + 1,
             name=dish.title,
             grams=int(meal.grams),
             calories=int(dish.cal * meal.grams),
@@ -369,18 +375,24 @@ def choose_meal(update: Update, context: CallbackContext):
 
     context.user_data["dish"] = dish
 
+    if context.user_data.get("weight"):
+        try:
+            weight = int(context.user_data["weight"])
+            update.callback_query.edit_message_text(
+                text=texts.choose_meal_date.format(title=dish.title, weight=weight),
+                reply_markup=keyboards.choose_meal_date(),
+                parse_mode=ParseMode.HTML,
+            )
+            return states.CHOOSE_MEAL_DATE
+
+        except ValueError:
+            pass
+
     update.callback_query.edit_message_text(
         text=texts.choose_meal_weight.format(title=dish.title),
         reply_markup=keyboards.cancel_button(),
         parse_mode=ParseMode.HTML,
     )
-
-    if context.user_data.get("weight"):
-        try:
-            weight = int(context.user_data["weight"])
-            return choose_meal_date(update, context)
-        except ValueError:
-            pass
 
     return states.CHOOSE_MEAL_WEIGHT
 
@@ -441,49 +453,61 @@ def choose_meal_date(update: Update, context: CallbackContext):
         return ConversationHandler.END
 
     if update.callback_query:
-        date = update.callback_query.data.split(":")[1]
+        text_date = update.callback_query.data.split(":")[1]
     else:
-        date = update.message.text
+        text_date = update.message.text
 
-    try:
-        if date == "today":
-            date = datetime.now()
-        elif date == "yesterday":
-            date = datetime.now() - timedelta(days=1)
-        elif date == "tommorow":
-            date = datetime.now() + timedelta(days=1)
+    if text_date == "today":
+        parsed_date = datetime.now()
+    elif text_date == "yesterday":
+        parsed_date = datetime.now() - timedelta(days=1)
+    elif text_date == "tommorow":
+        parsed_date = datetime.now() + timedelta(days=1)
+    else:
+        date_formats = ["%d.%m.%y", "%d.%m.%Y %H:%M", "%H:%M"]
+        parsed_date = None
+
+        for date_format in date_formats:
+            try:
+                parsed_date = datetime.strptime(text_date, date_format)
+                if date_format == "%H:%M":
+                    day = datetime.now().date()
+                    parsed_date = datetime(day.year, day.month, day.day, parsed_date.hour, parsed_date.minute)
+                break
+            except ValueError:
+                pass
+
         else:
-            date = datetime.strptime(date, "%d.%m.%y %H:%M")
+            if update.callback_query:
+                update.callback_query.edit_message_text(
+                    text=texts.choose_meal_date.format(title=dish.title, weight=weight),
+                    reply_markup=keyboards.choose_meal_date(),
+                    parse_mode=ParseMode.HTML,
+                )
+            else:
+                context.bot.send_message(
+                    chat_id=update.effective_user.id,
+                    text=texts.choose_meal_date.format(title=dish.title, weight=weight),
+                    reply_markup=keyboards.choose_meal_date(),
+                    parse_mode=ParseMode.HTML,
+                )
 
-    except ValueError as e:
-        if update.callback_query:
-            update.callback_query.edit_message_text(
-                text=texts.choose_meal_date.format(title=dish.title, weight=weight),
-                reply_markup=keyboards.choose_meal_date(),
-                parse_mode=ParseMode.HTML,
-            )
-        else:
-            context.bot.send_message(
-                chat_id=update.effective_user.id,
-                text=texts.choose_meal_date.format(title=dish.title, weight=weight),
-                reply_markup=keyboards.choose_meal_date(),
-                parse_mode=ParseMode.HTML,
-            )
+            return states.CHOOSE_MEAL_DATE
 
-        return states.CHOOSE_MEAL_DATE
-
-    meal = Meal(user=user, dish=dish, grams=weight, created_at=date)
+    meal = Meal(user=user, dish=dish, grams=weight, date_time=parsed_date)
     meal.save()
+
+    text = texts.meal_added.format(title=dish.title, weight=meal.grams, date=meal.date_time)
 
     if update.callback_query:
         update.callback_query.edit_message_text(
-            text=texts.meal_added.format(title=dish.title, weight=weight, date=date),
+            text=text,
             parse_mode=ParseMode.HTML,
         )
     else:
         context.bot.send_message(
             chat_id=update.effective_user.id,
-            text=texts.meal_added.format(title=dish.title, weight=weight, date=date),
+            text=text,
             reply_markup=keyboards.home_menu(),
             parse_mode=ParseMode.HTML,
         )
@@ -516,7 +540,7 @@ def delete_meal(update: Update, context: CallbackContext):
     try:
         date = context.user_data["date"]
 
-        meals = Meal.objects.filter(user=user, created_at__date=date).order_by("created_at")
+        meals = Meal.objects.filter(user=user, date_time__date=date).order_by("date_time")
 
         meal = meals[meal_id - 1]
     except (ValueError, IndexError, KeyError):
