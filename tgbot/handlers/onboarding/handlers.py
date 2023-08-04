@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import logging
+import re
 
 from dtb import settings
 
@@ -11,8 +12,8 @@ import tgbot.handlers.onboarding.keyboards as keyboards
 from text_manager.models import texts, button_texts
 
 from users.models import User
+from diary.models import Dish, Meal, GarminSyncedData
 
-from diary.models import Dish, Meal
 from fuzzywuzzy import process
 
 from tgbot.utils.garmin import check_garmin_credentials
@@ -191,6 +192,24 @@ def statistics(update: Update, context: CallbackContext):
             carbohydrates=int(dish.carb * meal.grams),
         )
 
+    garmin_stat_text = ""
+    garmin_stat = GarminSyncedData.objects.filter(user=user, date=date).first()
+    if garmin_stat:
+        garmin_stat_text = "\n\n" + texts.garmin_stat.format(
+            body_battery_charged_value=garmin_stat.body_battery_charged_value,
+            body_battery_drained_value=garmin_stat.body_battery_drained_value,
+            body_battery_highest_value=garmin_stat.body_battery_highest_value,
+            resting_heart_rate=garmin_stat.resting_heart_rate,
+            max_avg_heart_rate=garmin_stat.max_avg_heart_rate,
+            average_stress_level=garmin_stat.average_stress_level,
+            hour_sleep=garmin_stat.hour_sleep,
+            minutes_sleep=garmin_stat.minutes_sleep,
+            total_steps=garmin_stat.total_steps,
+            lowest_respiration_value=garmin_stat.lowest_respiration_value,
+            avg_waking_respiration_value=garmin_stat.avg_waking_respiration_value,
+            highest_respiration_value=garmin_stat.highest_respiration_value,
+        )
+
     text = texts.statistics.format(
         date=date.strftime("%d.%m.%Y"),
         products=products_text,
@@ -198,6 +217,7 @@ def statistics(update: Update, context: CallbackContext):
         protein=int(total_protein),
         fats=int(total_fats),
         carbohydrates=int(total_carbohydrates),
+        garmin_stat=garmin_stat_text,
     )
 
     if update.callback_query:
@@ -303,7 +323,23 @@ def garmin_password_handler(update: Update, context: CallbackContext):
     return ConversationHandler.END
 
 
-import re
+def delete_garmin_credentials(update: Update, context: CallbackContext):
+    user = User.get_user(update)
+
+    user.garmin_login = None
+    user.garmin_password = None
+    user.save()
+
+    gaemin_synced_data = GarminSyncedData.objects.filter(user=user).delete()
+
+    context.bot.send_message(
+        chat_id=update.effective_user.id,
+        text=texts.garmin_credentials_deleted,
+        reply_markup=keyboards.user_menu(user),
+        parse_mode=ParseMode.HTML,
+    )
+
+    return start(update, context)
 
 
 def convert_to_integer(input_str):
@@ -485,7 +521,13 @@ def choose_meal_date(update: Update, context: CallbackContext):
                 parsed_date = datetime.strptime(text_date, date_format)
                 if date_format == "%H:%M":
                     day = datetime.now().date()
-                    parsed_date = datetime(day.year, day.month, day.day, parsed_date.hour, parsed_date.minute)
+                    parsed_date = datetime(
+                        day.year,
+                        day.month,
+                        day.day,
+                        parsed_date.hour,
+                        parsed_date.minute,
+                    )
                 break
             except ValueError:
                 pass
@@ -560,6 +602,62 @@ def delete_meal(update: Update, context: CallbackContext):
 
     update.callback_query.edit_message_text(
         text=texts.meal_deleted,
+        parse_mode=ParseMode.HTML,
+    )
+
+    return statistics(update, context)
+
+
+def sync_garmin(update: Update, context: CallbackContext):
+    user = User.get_user(update)
+
+    if not user.has_garmin_credentials:
+        update.callback_query.edit_message_text(
+            text=texts.garmin_not_connected,
+            parse_mode=ParseMode.HTML,
+        )
+        return ConversationHandler.END
+
+    wait_message = context.bot.send_message(
+        chat_id=update.effective_user.id,
+        text=texts.garmin_sync_wait,
+        parse_mode=ParseMode.HTML,
+    )
+
+    from garminconnect import Garmin
+
+    client = Garmin(user.garmin_login, user.garmin_password)
+    client.login()
+    today = datetime.now().date()
+    stats = client.get_stats(today.isoformat())
+
+    args = {
+        "body_battery_charged_value": stats["bodyBatteryChargedValue"],
+        "body_battery_drained_value": stats["bodyBatteryDrainedValue"],
+        "body_battery_highest_value": stats["bodyBatteryHighestValue"],
+        "resting_heart_rate": stats["restingHeartRate"],
+        "max_avg_heart_rate": stats["maxAvgHeartRate"],
+        "average_stress_level": stats["averageStressLevel"],
+        "hour_sleep": stats["sleepingSeconds"] / 3600,
+        "minutes_sleep": stats["sleepingSeconds"] / 60,
+        "total_steps": stats["totalSteps"],
+        "lowest_respiration_value": stats["lowestRespirationValue"],
+        "avg_waking_respiration_value": stats["avgWakingRespirationValue"],
+    }
+
+    if GarminSyncedData.objects.filter(user=user, date=today).exists():
+        garmin_stat = GarminSyncedData.objects.update(
+            **args,
+        )
+    else:
+        garmin_stat = GarminSyncedData.objects.create(
+            user=user,
+            date=today,
+            **args,
+        )
+
+    wait_message.edit_text(
+        text=texts.garmin_successfully_synced,
         parse_mode=ParseMode.HTML,
     )
 

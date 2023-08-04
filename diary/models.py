@@ -41,3 +41,27 @@ class Meal(CreateTracker):
 
     def __str__(self):
         return f"{self.dish.title} - {self.grams}г"
+
+
+class GarminSyncedData(models.Model):
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey("users.User", on_delete=models.CASCADE)
+    date = models.DateField()
+
+    body_battery_charged_value = models.PositiveIntegerField(null=True)
+    body_battery_drained_value = models.PositiveIntegerField(null=True)
+    body_battery_highest_value = models.PositiveIntegerField(null=True)
+
+    resting_heart_rate = models.PositiveIntegerField(null=True)
+    max_avg_heart_rate = models.PositiveIntegerField(null=True)
+
+    average_stress_level = models.PositiveIntegerField(null=True)
+
+    hour_sleep = models.PositiveIntegerField(null=True)
+    minutes_sleep = models.PositiveIntegerField(null=True)
+
+    total_steps = models.PositiveIntegerField(null=True)
+
+    lowest_respiration_value = models.PositiveIntegerField(null=True)
+    avg_waking_respiration_value = models.PositiveIntegerField(null=True)
+    highest_respiration_value = models.PositiveIntegerField(null=True)
