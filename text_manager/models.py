@@ -54,7 +54,7 @@ class AttributeDescriptorButton:
 class ButtonTexts(metaclass=MetaClassButton):
     home = "Главная"
     statistics = "Статистика"
-    addtionals = "Дополнительно"
+    additionals = "Дополнительно"
 
     previous_day = "Предыдущий день"
     next_day = "Следующий день"

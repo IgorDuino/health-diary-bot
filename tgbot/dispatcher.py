@@ -47,6 +47,42 @@ def setup_dispatcher(dp: Dispatcher):
         )
     )
 
+    delete_meal_conversation = ConversationHandler(
+        entry_points=[
+            CallbackQueryHandler(onboarding_handlers.delete_meal_start, pattern=s("delete_meal:"), pass_user_data=True)
+        ],
+        states={
+            states.DELETE_MEAL: [
+                CallbackQueryHandler(
+                    onboarding_handlers.delete_meal,
+                    pattern=s("delete_meal_id:"),
+                    pass_user_data=True,
+                ),
+            ],
+        },
+        fallbacks=[
+            CallbackQueryHandler(onboarding_handlers.statistics, pattern=s("cancel"), pass_user_data=True),
+            MessageHandler(Filters.regex(button_texts.home), onboarding_handlers.start, pass_user_data=True),
+            MessageHandler(Filters.regex(button_texts.statistics), onboarding_handlers.statistics, pass_user_data=True),
+            MessageHandler(
+                Filters.regex(button_texts.additionals), onboarding_handlers.additional, pass_user_data=True
+            ),
+            *fb,
+        ],
+        name="delete_meal",
+        persistent=True,
+        per_user=True,
+    )
+    dp.add_handler(delete_meal_conversation)
+
+    dp.add_handler(
+        MessageHandler(
+            Filters.regex(button_texts.additionals),
+            onboarding_handlers.additional,
+            pass_user_data=True,
+        )
+    )
+
     # statistics
     dp.add_handler(
         MessageHandler(
@@ -79,37 +115,6 @@ def setup_dispatcher(dp: Dispatcher):
         per_user=True,
     )
     dp.add_handler(specify_date_conversation)
-
-    delete_meal_conversation = ConversationHandler(
-        entry_points=[
-            CallbackQueryHandler(onboarding_handlers.delete_meal_start, pattern=s("delete_meal"), pass_user_data=True)
-        ],
-        states={
-            states.DELETE_MEAL: [
-                CallbackQueryHandler(
-                    onboarding_handlers.delete_meal,
-                    pattern=s("delete_meal:"),
-                    pass_user_data=True,
-                ),
-            ],
-        },
-        fallbacks=[
-            CallbackQueryHandler(onboarding_handlers.statistics, pattern=s("cancel"), pass_user_data=True),
-            *fb,
-        ],
-        name="delete_meal",
-        persistent=True,
-        per_user=True,
-    )
-    dp.add_handler(delete_meal_conversation)
-
-    dp.add_handler(
-        MessageHandler(
-            Filters.regex(button_texts.addtionals),
-            onboarding_handlers.addtional,
-            pass_user_data=True,
-        )
-    )
 
     # garmin
     add_garmin_conversation = ConversationHandler(

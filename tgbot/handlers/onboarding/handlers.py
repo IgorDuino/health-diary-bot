@@ -97,7 +97,7 @@ def start(update: Update, context: CallbackContext):
             parse_mode=ParseMode.HTML,
         )
 
-    context.user_data["dishes_to_handle"] = []
+    context.user_data.clear()
 
     return ConversationHandler.END
 
@@ -146,10 +146,7 @@ def statistics_specify_date(update: Update, context: CallbackContext):
 def statistics(update: Update, context: CallbackContext):
     user = User.get_user(update)
 
-    date = context.user_data.get("date")
-    if not date:
-        date = datetime.now().date()
-        context.user_data["date"] = date
+    date = context.user_data.get("date", datetime.now().date())
 
     if update.callback_query:
         if update.callback_query.data.startswith("previous_day"):
@@ -159,7 +156,7 @@ def statistics(update: Update, context: CallbackContext):
         elif update.callback_query.data.startswith("current_day"):
             date = datetime.now().date()
 
-        context.user_data["date"] = date
+    context.user_data["date"] = date
 
     meals = Meal.objects.filter(user=user, date_time__date=date).order_by("date_time")
 
@@ -237,7 +234,7 @@ def statistics(update: Update, context: CallbackContext):
     return ConversationHandler.END
 
 
-def addtional(update: Update, context: CallbackContext):
+def additional(update: Update, context: CallbackContext):
     user = User.get_user(update)
 
     context.bot.send_message(
@@ -361,7 +358,10 @@ def start_choose_meal(update: Update, context: CallbackContext):
         )
         return ConversationHandler.END
 
-    if update.message and update.message.text:
+    if len(context.user_data.get("dishes_to_handle", [])) != 0:
+        data = context.user_data["dishes_to_handle"]
+
+    elif update.message and update.message.text:
         data = update.message.text
         data = data.replace(";", "\n")
         data = data.replace(",", "\n")
@@ -389,9 +389,6 @@ def start_choose_meal(update: Update, context: CallbackContext):
 
         data = list(filter(lambda x: x, data))
         data = list(map(lambda x: x.strip(), data))
-
-    else:
-        data = context.user_data["dishes_to_handle"]
 
     text = data[0]
     context.user_data["dishes_to_handle"] = data[1:]
@@ -513,7 +510,7 @@ def choose_meal_date(update: Update, context: CallbackContext):
     elif text_date == "tommorow":
         parsed_date = datetime.now() + timedelta(days=1)
     else:
-        date_formats = ["%d.%m.%y", "%d.%m.%Y %H:%M", "%H:%M"]
+        date_formats = ["%H:%M", "%d.%m.%y", "%d.%m.%Y %H:%M"]
         parsed_date = None
 
         for date_format in date_formats:
