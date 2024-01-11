@@ -1,11 +1,6 @@
-# VPN CRM
+# Health diary bot
 
-# Currently in development ⚠
-
-### Based on [wg-easy](https://github.com/WeeJeWel/wg-easy) server
-
-Use: Django, Celery, Redis, Postgres, Docker
-
-### Payment systems
-- [ ] Lava
-- [ ] PayOk
+Дневник для записи приемов пищи и активностей в течение дня
+ - нечеткий поиск продуктов и блюд по большой базе данных
+ - умный парсинг таких параметров приёма пищи как масса или колличество штук
+ - синхронизация с умными браслетами Garmin с целью корреляции параметров пульса, давления и качества сна с активностью и рационом
